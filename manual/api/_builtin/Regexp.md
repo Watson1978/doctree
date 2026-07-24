@@ -244,6 +244,69 @@ p Regexp.try_convert(/re/)    # => /re/
 p Regexp.try_convert("re")    # => nil
 ```
 
+#@since 3.2
+### def timeout -> Float | nil
+
+正規表現のマッチにかける時間の上限を秒数で返します。
+
+上限が設定されていない場合は nil を返します。既定値は nil です。
+
+この設定はプロセス全体で共有されます。個々の正規表現に設定された上限
+([m:Regexp#timeout])がある場合、そちらが優先されます。
+
+```ruby
+p Regexp.timeout # => nil
+```
+
+- **SEE** [m:Regexp.timeout=], [m:Regexp#timeout]
+
+### def timeout=(seconds)
+
+正規表現のマッチにかける時間の上限を秒数で設定します。
+
+nil を指定すると上限を設定しない状態に戻します。
+
+この設定はプロセス全体に影響します。個々の正規表現ごとに設定したい場合は
+[m:Regexp.new] の timeout キーワード引数を使用してください。
+
+上限を超えた場合は [c:Regexp::TimeoutError] が発生します。
+
+- **param** `seconds` -- 上限の秒数を数値で指定します。nil を指定すると上限なしになります。
+
+```ruby
+Regexp.timeout = 0.5
+p Regexp.timeout # => 0.5
+
+# バックトラックが多く発生し、線形時間で処理できない正規表現の例
+/^((a|a)+)\1$/ =~ ("a" * 30 + "x") # ~> Regexp::TimeoutError
+```
+
+- **SEE** [m:Regexp.timeout], [m:Regexp#timeout], [c:Regexp::TimeoutError]
+
+### def linear_time?(re) -> bool
+### def linear_time?(string, options = 0) -> bool
+
+正規表現 re が入力文字列の長さに対して線形時間でマッチできる場合に true を、
+そうでない場合に false を返します。
+
+これは Ruby の処理系の性質であって、正規表現そのものの性質ではありません。
+同じ正規表現でも Ruby のビルドや実装によって結果が変わることがあり、
+返り値について前方互換性も後方互換性も保証されません。
+
+- **param** `re` -- 判定したい正規表現を指定します。
+
+- **param** `string` -- 正規表現を文字列で指定します。
+
+- **param** `options` -- 正規表現のオプションを指定します。
+
+```ruby
+p Regexp.linear_time?(/re/)          # => true
+p Regexp.linear_time?(/^((a|a)+)\1$/) # => false （後方参照があるため）
+```
+
+- **SEE** [m:Regexp.timeout=]
+#@end
+
 ## Instance Methods
 
 ### def =~(string) -> Integer | nil
@@ -544,6 +607,27 @@ p Regexp.new("foo", Regexp::MULTILINE | Regexp::EXTENDED).options # =>6
 p Regexp.new("foo", Regexp::IGNORECASE | Regexp::MULTILINE | Regexp::EXTENDED).options # => 7
 ```
 
+#@since 3.2
+### def timeout -> Float | nil
+
+その正規表現のマッチにかける時間の上限を秒数で返します。
+
+上限が設定されていない場合は nil を返します。
+
+この設定は正規表現ごとのもので、[m:Regexp.new] の timeout キーワード引数で
+指定します。設定されている場合、[m:Regexp.timeout] によるプロセス全体の設定
+よりも優先されます。
+
+```ruby
+re = Regexp.new("^(a|a)*$", timeout: 0.5)
+p re.timeout      # => 0.5
+
+p /^(a|a)*$/.timeout # => nil
+```
+
+- **SEE** [m:Regexp.timeout], [m:Regexp.timeout=]
+#@end
+
 ### def source -> String
 
 その正規表現のもととなった文字列表現を生成して返します。
@@ -693,3 +777,21 @@ p /(.)(.)/.names
 バイト列としてマッチすることを意味します。
 
 正規表現リテラルの n オプションに対応します。
+
+#@since 3.2
+# class Regexp::TimeoutError < RegexpError
+
+正規表現のマッチが、設定された時間の上限を超えた場合に発生します。
+
+上限は [m:Regexp.timeout=] でプロセス全体に対して、
+あるいは [m:Regexp.new] の timeout キーワード引数で正規表現ごとに設定します。
+
+```ruby
+Regexp.timeout = 0.5
+
+# バックトラックが多く発生し、線形時間で処理できない正規表現の例
+/^((a|a)+)\1$/ =~ ("a" * 30 + "x") # ~> Regexp::TimeoutError
+```
+
+- **SEE** [m:Regexp.timeout=], [m:Regexp#timeout]
+#@end
